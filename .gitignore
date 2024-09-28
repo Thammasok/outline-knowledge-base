@@ -1,7 +1,4 @@
-docker.env
+.env
 
 
-redis.conf*
-storage-data*
-database-data*
-https-portal-data*
+dockers*

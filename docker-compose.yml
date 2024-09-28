@@ -1,70 +1,58 @@
-version: '3.2'
 services:
   outline:
     image: docker.getoutline.com/outlinewiki/outline:latest
-    env_file: ./docker.env
+    container_name: outline
+    env_file: ./.env
     ports:
-      - '3000:3000'
+      - 3000:3000
     volumes:
-      - storage-data:/var/lib/outline/data
+      - ./dockers/outline:/var/lib/outline/data
     depends_on:
       - postgres
       - redis
+    networks:
+      - workspace
 
   redis:
     image: redis
-    env_file: ./docker.env
+    container_name: outline-redis
+    env_file: ./.env
     ports:
-      - '6379:6379'
+      - 6379:6379
     volumes:
-      - ./redis.conf:/redis.conf
+      - ./dockers/redis.conf:/redis.conf
     command: ['redis-server', '/redis.conf']
     healthcheck:
       test: ['CMD', 'redis-cli', 'ping']
       interval: 10s
       timeout: 30s
       retries: 3
+    networks:
+      - workspace
 
   postgres:
-    image: postgres
-    env_file: ./docker.env
-    ports:
-      - '5432:5432'
-    volumes:
-      - database-data:/var/lib/postgresql/data
-    healthcheck:
-      test: ['CMD', 'pg_isready', '-d', 'outline', '-U', 'user']
-      interval: 30s
-      timeout: 20s
-      retries: 3
-    environment:
-      POSTGRES_USER: 'user'
-      POSTGRES_PASSWORD: 'pass'
-      POSTGRES_DB: 'outline'
-
-  https-portal:
-    image: steveltn/https-portal
-    env_file: ./docker.env
-    ports:
-      - '80:80'
-      - '443:443'
-    links:
-      - outline
+    image: postgres:latest
+    container_name: outline-postgres
     restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+      DATABASE_SSL: ${DATABASE_SSL}
+    ports:
+      - 5432:5432
     volumes:
-      - https-portal-data:/var/lib/https-portal
+      - ./dockers/postgresql:/var/lib/postgresql/data
     healthcheck:
-      test: ['CMD', 'service', 'nginx', 'status']
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
       interval: 30s
       timeout: 20s
       retries: 3
-    environment:
-      DOMAINS: 'docs.mycompany.com -> http://outline:3000'
-      STAGE: 'production'
-      WEBSOCKET: 'true'
-      CLIENT_MAX_BODY_SIZE: '0'
+    networks:
+      - workspace
 
 volumes:
-  https-portal-data:
-  storage-data:
-  database-data:
+  dockers:
+
+networks:
+  workspace:
